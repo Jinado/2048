@@ -79,6 +79,11 @@
         <button id="btn-manual-play">Play next move</button>
         <br>
         <label>
+          Max depth:
+          <input id="max-depth" type="number" min="1" max="9001" value="3" step="1">
+        </label>
+        <br>
+        <label>
           Two's spawn chance:
           <input id="spawn-chance-2" type="number" min="0" max="100" value="90" step="1">
         </label>
@@ -89,6 +94,19 @@
 
         <br><br>
         <p>Next move: <span id="next-move">N/A</span></p>
+
+        <h3>Board setup</h3>
+        <div class="board-setup-container">
+          <input type="text" class="grid-value" data-x="0" data-y="0"> <input type="text" class="grid-value" data-x="1" data-y="0"> <input type="text" class="grid-value" data-x="2" data-y="0"> <input type="text" class="grid-value" data-x="3" data-y="0">
+          <br>
+          <input type="text" class="grid-value" data-x="0" data-y="1"> <input type="text" class="grid-value" data-x="1" data-y="1"> <input type="text" class="grid-value" data-x="2" data-y="1"> <input type="text" class="grid-value" data-x="3" data-y="1">
+          <br>
+          <input type="text" class="grid-value" data-x="0" data-y="2"> <input type="text" class="grid-value" data-x="1" data-y="2"> <input type="text" class="grid-value" data-x="2" data-y="2"> <input type="text" class="grid-value" data-x="3" data-y="2">
+          <br>
+          <input type="text" class="grid-value" data-x="0" data-y="3"> <input type="text" class="grid-value" data-x="1" data-y="3"> <input type="text" class="grid-value" data-x="2" data-y="3"> <input type="text" class="grid-value" data-x="3" data-y="3">
+          <br><br>
+          <button id="btn-set-grid">Set grid</button>
+        </div>
       </div>
     </div>
 

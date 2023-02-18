@@ -1,14 +1,23 @@
 function GameManager(size, InputManager, Actuator, StorageManager) {
-  this.size           = size; // Size of the grid
-  this.inputManager   = new InputManager;
-  this.storageManager = new StorageManager;
-  this.actuator       = new Actuator;
+  this.size = size; // Size of the grid
+  this.isClone = false;
 
-  this.startTiles     = 2;
+  const shouldClone = InputManager && InputManager === 'clone';
+
+  if(shouldClone) {
+    this.isClone = true;
+    return;
+  }
+
+  this.inputManager = new InputManager;
+  this.storageManager = new StorageManager;
+  this.actuator = new Actuator;
 
   this.inputManager.on("move", this.move.bind(this));
   this.inputManager.on("restart", this.restart.bind(this));
   this.inputManager.on("keepPlaying", this.keepPlaying.bind(this));
+
+  this.startTiles = 2;
 
   this.setup();
 }
@@ -182,13 +191,17 @@ GameManager.prototype.move = function (direction) {
   });
 
   if (moved) {
-    this.addRandomTile();
+    if(!this.isClone) {
+      this.addRandomTile();
+    }
 
     if (!this.movesAvailable()) {
       this.over = true; // Game over!
     }
 
-    this.actuate();
+    if(!this.isClone) {
+      this.actuate();
+    }
   }
 };
 
@@ -271,4 +284,14 @@ GameManager.prototype.tileMatchesAvailable = function () {
 
 GameManager.prototype.positionsEqual = function (first, second) {
   return first.x === second.x && first.y === second.y;
+};
+
+GameManager.prototype.setGrid = function (grid) {
+  this.grid = new Grid(this.size, grid);
+};
+
+GameManager.createBackgroundClone = function (grid) {
+  const clone = new GameManager(4, 'clone');
+  clone.setGrid(grid);
+  return clone;
 };

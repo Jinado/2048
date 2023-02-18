@@ -955,5 +955,7 @@ hr {
 .grid-and-controls-container .controls-container button:disabled {
   opacity: 0.4;
 }
-
-/*# sourceMappingURL=main.css.map */
+.grid-and-controls-container .board-setup-container input {
+  width: 2em;
+  text-align: center;
+}

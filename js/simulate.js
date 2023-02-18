@@ -1,6 +1,6 @@
 function Simulation() {
     this.game = window.game;
-    this.spawnChance2 = document.querySelector('#spawn-chance-2').value;
+    this.spawnChance2 = Number(document.querySelector('#spawn-chance-2').value);
     this.autoPlay = false;
     this.optimalMove = null;
 
@@ -11,7 +11,7 @@ function Simulation() {
         LEFT: 3
     };
 
-    this.maxDepth = 3;
+    this.maxDepth = Number(document.querySelector('#max-depth').value);
 
     this.init();
 }
@@ -20,11 +20,40 @@ Simulation.prototype.init = function () {
     document.querySelector('#spawn-chance-2')
         .addEventListener('change', this.changeSpawnChance.bind(this));
 
+    document.querySelector('#max-depth')
+        .addEventListener('change', this.changeMaxDepth.bind(this));
+
     document.querySelector('#btn-autoplay')
         .addEventListener('click', this.handleAutoplayButton.bind(this));
 
     document.querySelector('#btn-manual-play')
         .addEventListener('click', this.playNextMove.bind(this));
+
+    document.querySelector('#btn-set-grid')
+        .addEventListener('click', this.setGrid.bind(this));
+};
+
+Simulation.prototype.setGrid = function () {
+    const values = document.querySelectorAll('.grid-value');
+    const normalizedGrid = Array.from(values).map(el => {
+       const position = { x: Number(el.dataset.x), y: Number(el.dataset.y) };
+       const value = Number(el.value) || null;
+
+       return { position, value };
+    }).reduce((grid, cell, idx) => {
+        grid[idx % 4].push(cell.value ? cell : null);
+        return grid;
+    }, [[], [], [], []]);
+
+    this.game.setGrid(normalizedGrid);
+
+    this.game.actuator.actuate(this.game.grid, {
+        score:      this.game.score,
+        over:       this.game.over,
+        won:        this.game.won,
+        bestScore:  this.game.storageManager.getBestScore(),
+        terminated: this.game.isGameTerminated()
+    });
 };
 
 Simulation.prototype.handleAutoplayButton = function (e) {
@@ -51,7 +80,11 @@ Simulation.prototype.getRandomTileValue = function () {
 };
 
 Simulation.prototype.changeSpawnChance = function (e) {
-    this.spawnChance2 = e.target.value;
+    this.spawnChance2 = Number(e.target.value);
+};
+
+Simulation.prototype.changeMaxDepth = function (e) {
+    this.maxDepth = Number(e.target.value);
 };
 
 /*
@@ -136,13 +169,15 @@ Simulation.prototype.areBoardsEqual = function (a, b) {
     return true;
 };
 
-Simulation.prototype.simulateMove = function (board, move) {
-    // TODO: Simulate the move
-    return this.normalizeBoard(board);
+Simulation.prototype.simulateMove = function (board, direction) {
+    const clone = GameManager.createBackgroundClone(board);
+    clone.move(direction);
+
+    return clone.grid.cells;
 };
 
-Simulation.prototype.calculateScore = function (board, move) {
-  const newBoard = this.simulateMove(board, move);
+Simulation.prototype.calculateScore = function (board, direction) {
+  const newBoard = this.simulateMove(board, direction);
 
   if(this.areBoardsEqual(board, newBoard)) {
       return 0;
@@ -151,13 +186,8 @@ Simulation.prototype.calculateScore = function (board, move) {
   return this.generateScore(newBoard, 0);
 };
 
-Simulation.prototype.normalizeBoard = function (board) {
-    return board; // TODO: Normalize the board
-};
-
 Simulation.prototype.getCurrentBoard = function ()  {
-    const board = this.game.serialize().grid.cells;
-    return this.normalizeBoard(board);
+    return this.game.serialize().grid.cells;
 };
 
 Simulation.prototype.getNextMove = function () {
@@ -166,11 +196,11 @@ Simulation.prototype.getNextMove = function () {
     let bestMove = null;
     let bestScore = 0;
 
-    for(let move in Object.values(this.Keys)) {
-        const score = this.calculateScore(currentBoard, move);
+    for(let direction in Object.values(this.Keys)) {
+        const score = this.calculateScore(currentBoard, direction);
         if(score > bestScore) {
             bestScore = score;
-            bestMove = move;
+            bestMove = direction;
         }
     }
 
@@ -199,6 +229,7 @@ Simulation.prototype.handleGameOver = function () {
   this.autoPlay = false;
   document.querySelector('#btn-autoplay').innerText = 'Autoplay';
   document.querySelector('#btn-manual-play').disabled = false;
+  document.querySelector('#next-move').innerText = 'N/A';
 };
 
 Simulation.prototype.playNextMove = function () {
