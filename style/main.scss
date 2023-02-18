@@ -1,6 +1,7 @@
 @import "helpers";
 @import "fonts/clear-sans.css";
 
+$container-width: 800px;
 $field-width: 500px;
 $grid-spacing: 15px;
 $grid-row-cells: 4;
@@ -141,7 +142,7 @@ hr {
 }
 
 .container {
-  width: $field-width;
+  width: $container-width;
   margin: 0 auto;
 }
 
@@ -165,6 +166,12 @@ hr {
   color: $bright-text-color;
   height: 40px;
   line-height: 42px;
+  cursor: pointer;
+  transition: opacity 250ms;
+
+  &:hover {
+    opacity: 0.8;
+  }
 }
 
 // Game field mixin used to render CSS at different width
@@ -544,6 +551,21 @@ hr {
 
     .lower {
       margin-top: 30px !important;
+    }
+  }
+}
+
+.grid-and-controls-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-column-gap: 20px;
+
+  .controls-container {
+    button {
+      @include button;
+      text-align: center;
+      margin-bottom: 10px;
+      border: 0;
     }
   }
 }
