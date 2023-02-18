@@ -228,6 +228,9 @@ hr {
 .game-container .game-message a:hover {
   opacity: 0.8;
 }
+.game-container .game-message a:disabled {
+  opacity: 0.4;
+}
 .game-container .game-message a.keep-playing-button {
   display: none;
 }
@@ -642,6 +645,9 @@ hr {
 .restart-button:hover {
   opacity: 0.8;
 }
+.restart-button:disabled {
+  opacity: 0.4;
+}
 
 .game-explanation {
   margin-top: 50px;
@@ -755,6 +761,9 @@ hr {
   }
   .game-container .game-message a:hover {
     opacity: 0.8;
+  }
+  .game-container .game-message a:disabled {
+    opacity: 0.4;
   }
   .game-container .game-message a.keep-playing-button {
     display: none;
@@ -942,6 +951,9 @@ hr {
 }
 .grid-and-controls-container .controls-container button:hover {
   opacity: 0.8;
+}
+.grid-and-controls-container .controls-container button:disabled {
+  opacity: 0.4;
 }
 
 /*# sourceMappingURL=main.css.map */

@@ -28,16 +28,21 @@ Simulation.prototype.init = function () {
 
 Simulation.prototype.handleAutoplayButton = function (e) {
   const button = e.target;
+  const btnManual = document.querySelector('#btn-manual-play');
 
   if(!this.autoPlay) {
       this.autoPlay = true;
       button.innerText = 'Cancel';
+
+      btnManual.disabled = true;
+
       this.playNextMove();
       return;
   }
 
   this.autoPlay = false;
   button.innerText = 'Autoplay';
+  btnManual.disabled = false;
 };
 
 Simulation.prototype.getRandomTileValue = function () {
@@ -49,17 +54,7 @@ Simulation.prototype.changeSpawnChance = function (e) {
 };
 
 Simulation.prototype.getNextMove = function () {
-    const num = Math.ceil(Math.random() * (4 - 1) + 1);
-    switch(num) {
-        case 1:
-            return this.Keys.UP;
-        case 2:
-            return this.Keys.LEFT;
-        case 3:
-            return this.Keys.DOWN;
-        case 4:
-            return this.Keys.RIGHT;
-    }
+
 };
 
 Simulation.prototype.updateOptimalMoveText = function () {
@@ -83,6 +78,7 @@ Simulation.prototype.updateOptimalMoveText = function () {
 Simulation.prototype.handleGameOver = function () {
   this.autoPlay = false;
   document.querySelector('#btn-autoplay').innerText = 'Autoplay';
+  document.querySelector('#btn-manual-play').disabled = false;
 };
 
 Simulation.prototype.playNextMove = function () {

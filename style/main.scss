@@ -172,6 +172,10 @@ hr {
   &:hover {
     opacity: 0.8;
   }
+
+  &:disabled {
+    opacity: 0.4;
+  }
 }
 
 // Game field mixin used to render CSS at different width
