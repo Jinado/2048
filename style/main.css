@@ -955,6 +955,12 @@ hr {
 .grid-and-controls-container .controls-container button:disabled {
   opacity: 0.4;
 }
+.grid-and-controls-container .controls-container .score-weight {
+  width: 50px;
+}
+.grid-and-controls-container h3#board-setup-header {
+  margin-top: 5px;
+}
 .grid-and-controls-container .board-setup-container input {
   width: 2em;
   text-align: center;

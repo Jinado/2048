@@ -79,6 +79,21 @@
         <button id="btn-manual-play">Play next move</button>
         <br>
         <label>
+          Empty spaces:
+          <input class="score-weight" id="score-weight-empty" type="number" value="60" step="1">
+        </label>
+        <br>
+        <label>
+          Merges:
+          <input class="score-weight" id="score-weight-merges" type="number" value="100" step="1">
+        </label>
+        <br>
+        <label>
+          Positioning:
+          <input class="score-weight" id="score-weight-position" type="number" value="70" step="1">
+        </label>
+        <br>
+        <label>
           Max depth:
           <input id="max-depth" type="number" min="1" max="9001" value="2" step="1">
         </label>
@@ -95,7 +110,7 @@
         <br><br>
         <p>Next move: <span id="next-move">N/A</span></p>
 
-        <h3>Board setup</h3>
+        <h3 id="board-setup-header">Board setup</h3>
         <div class="board-setup-container">
           <input type="text" class="grid-value" data-x="0" data-y="0"> <input type="text" class="grid-value" data-x="1" data-y="0"> <input type="text" class="grid-value" data-x="2" data-y="0"> <input type="text" class="grid-value" data-x="3" data-y="0">
           <br>

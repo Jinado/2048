@@ -13,8 +13,8 @@ function Simulation() {
 
     this.ScoreWeight = {
         FIXED: 10000,
-        EMPTY: 50,
-        MERGES: 90,
+        EMPTY: 60,
+        MERGES: 100,
         POSITION: 70
     };
 
@@ -40,7 +40,31 @@ Simulation.prototype.init = function () {
         .addEventListener('click', this.handleSetGridButton.bind(this));
 
     document.querySelector('a.restart-button')
-        .addEventListener('click', this.clearGridTextFields.bind(this));
+        .addEventListener('click', this.restartHandler.bind(this));
+
+    document.querySelector('a.retry-button')
+        .addEventListener('click', this.restartHandler.bind(this));
+
+    document.querySelector('#score-weight-empty')
+        .addEventListener('change', this.updateScoreWeightEmpty.bind(this));
+
+    document.querySelector('#score-weight-merges')
+        .addEventListener('change', this.updateScoreWeightMerges.bind(this));
+
+    document.querySelector('#score-weight-position')
+        .addEventListener('change', this.updateScoreWeightPosition.bind(this));
+};
+
+Simulation.prototype.updateScoreWeightEmpty = function () {
+  this.ScoreWeight.EMPTY = Number(document.querySelector('#score-weight-empty').value);
+};
+
+Simulation.prototype.updateScoreWeightMerges = function () {
+    this.ScoreWeight.MERGES = Number(document.querySelector('#score-weight-merges').value);
+};
+
+Simulation.prototype.updateScoreWeightPosition = function () {
+    this.ScoreWeight.POSITION = Number(document.querySelector('#score-weight-position').value);
 };
 
 Simulation.prototype.handleSetGridButton = function () {
@@ -117,12 +141,68 @@ Simulation.prototype.getTotalEmptySpaces = function (board) {
     return total;
 };
 
+Simulation.prototype.areCellsOfEqualValue = function (a, b) {
+  if(!a || !b) return false;
+  return Number(a.value) === Number(b.value);
+};
+
+Simulation.prototype.getTotalPossibleMerges = function (board) {
+    let total = 0;
+
+    for(let x = 0; x < this.game.size; x++) {
+        for(let y = 0; y < this.game.size; y++) {
+            const cell = board[x][y];
+
+            const cellAbove = board[x][y + 1] || null;
+            const cellBelow = board[x][y - 1] || null;
+            const cellRight = (board[x + 1] || [])[y] || null;
+            const cellLeft  = (board[x - 1] || [])[y] || null;
+
+            const adjacentCells = [ cellAbove, cellBelow, cellRight, cellLeft ];
+
+            adjacentCells.forEach(adjacentCell => {
+                if(this.areCellsOfEqualValue(cell, adjacentCell)) {
+                    total++;
+                }
+            });
+        }
+    }
+
+    return total;
+};
+
+Simulation.prototype.getPositionScore = function (board) {
+    let highestValueIsInCorner = false;
+    let highestValue = 0;
+
+    for(let x = 0; x < this.game.size; x++) {
+        for(let y = 0; y < this.game.size; y++) {
+            const cell = board[x][y];
+            if(!cell) continue;
+
+            highestValue = Math.max(cell.value, highestValue);
+            if(cell.value === highestValue) {
+                highestValueIsInCorner = Number(x) === 0 && Number(y) === 0;
+            }
+        }
+    }
+
+    return highestValueIsInCorner ? 1 : 0;
+};
+
 Simulation.prototype.calculateFinalScore = function (board) {
     let score = this.ScoreWeight.FIXED;
-    const emptySpaces = this.getTotalEmptySpaces(board);
-    score = (score + (emptySpaces * this.ScoreWeight.EMPTY)) / 100;
 
-    return score;
+    const emptySpaces = this.getTotalEmptySpaces(board);
+    score = score + (emptySpaces * this.ScoreWeight.EMPTY);
+
+    const merges = this.getTotalPossibleMerges(board);
+    score = score + (merges * this.ScoreWeight.MERGES);
+
+    const position = this.getPositionScore(board);
+    score = score + (position * this.ScoreWeight.POSITION);
+
+    return score / 100;
 };
 
 Simulation.prototype.calculateMoveScore = function (board, currentDepth) {
@@ -235,6 +315,11 @@ Simulation.prototype.getNextMove = function () {
 Simulation.prototype.updateOptimalMoveText = function () {
     const text = document.querySelector('#next-move');
 
+    if(this.optimalMove === null) {
+        text.innerText = 'N/A';
+        return;
+    }
+
     switch(Number(this.optimalMove)) {
         case this.Keys.UP:
             text.innerText = 'UP';
@@ -255,6 +340,7 @@ Simulation.prototype.handleGameOver = function () {
   document.querySelector('#btn-autoplay').innerText = 'Autoplay';
   document.querySelector('#btn-manual-play').disabled = false;
   document.querySelector('#next-move').innerText = 'N/A';
+  this.copyBoardToTextFields();
 };
 
 Simulation.prototype.playNextMove = function () {
@@ -282,9 +368,10 @@ Simulation.prototype.playNextMove = function () {
     }
 };
 
-Simulation.prototype.clearGridTextFields = function () {
-    const fields = Array.from(document.querySelectorAll('.grid-value'));
-    fields.forEach(field => field.value = null);
+Simulation.prototype.restartHandler = function () {
+    this.optimalMove = null;
+    this.updateOptimalMoveText();
+    this.copyBoardToTextFields();
 };
 
 Simulation.prototype.copyBoardToTextFields = function () {
