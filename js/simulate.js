@@ -11,6 +11,13 @@ function Simulation() {
         LEFT: 3
     };
 
+    this.ScoreWeight = {
+        FIXED: 10000,
+        EMPTY: 50,
+        MERGES: 90,
+        POSITION: 70
+    };
+
     this.maxDepth = Number(document.querySelector('#max-depth').value);
 
     this.init();
@@ -30,10 +37,13 @@ Simulation.prototype.init = function () {
         .addEventListener('click', this.playNextMove.bind(this));
 
     document.querySelector('#btn-set-grid')
-        .addEventListener('click', this.setGrid.bind(this));
+        .addEventListener('click', this.handleSetGridButton.bind(this));
+
+    document.querySelector('a.restart-button')
+        .addEventListener('click', this.clearGridTextFields.bind(this));
 };
 
-Simulation.prototype.setGrid = function () {
+Simulation.prototype.handleSetGridButton = function () {
     const values = document.querySelectorAll('.grid-value');
     const normalizedGrid = Array.from(values).map(el => {
        const position = { x: Number(el.dataset.x), y: Number(el.dataset.y) };
@@ -73,94 +83,109 @@ Simulation.prototype.handleAutoplayButton = function (e) {
   this.autoPlay = false;
   button.innerText = 'Autoplay';
   btnManual.disabled = false;
-};
 
-Simulation.prototype.getRandomTileValue = function () {
-    return Math.random() < (this.spawnChance2 / 100) ? 2 : 4;
+  this.optimalMove = this.getNextMove();
+  this.updateOptimalMoveText();
+  this.optimalMove = null;
+  this.copyBoardToTextFields();
 };
 
 Simulation.prototype.changeSpawnChance = function (e) {
     this.spawnChance2 = Number(e.target.value);
+
+    document.querySelector('#spawn-chance-2-help-text')
+        .innerText = this.spawnChance2;
+
+    document.querySelector('#spawn-chance-4-help-text')
+        .innerText = 100 - this.spawnChance2;
 };
 
 Simulation.prototype.changeMaxDepth = function (e) {
     this.maxDepth = Number(e.target.value);
 };
 
-/*
-{
-    "grid": {
-        "size": 4,
-        "cells": [
-            [
-                {
-                    "position": {
-                        "x": 0,
-                        "y": 0
-                    },
-                    "value": 2
-                },
-                null,
-                null,
-                null
-            ],
-            [
-                null,
-                null,
-                null,
-                null
-            ],
-            [
-                null,
-                null,
-                null,
-                {
-                    "position": {
-                        "x": 2,
-                        "y": 3
-                    },
-                    "value": 2
-                }
-            ],
-            [
-                null,
-                null,
-                null,
-                null
-            ]
-        ]
-    },
-    "score": 0,
-    "over": false,
-    "won": false,
-    "keepPlaying": false
-}
- */
+Simulation.prototype.getTotalEmptySpaces = function (board) {
+    let total = 0;
+
+    board.forEach(row => {
+        row.forEach(col => {
+           if(col !== null) return;
+           total++;
+        });
+    });
+
+    return total;
+};
+
+Simulation.prototype.calculateFinalScore = function (board) {
+    let score = this.ScoreWeight.FIXED;
+    const emptySpaces = this.getTotalEmptySpaces(board);
+    score = (score + (emptySpaces * this.ScoreWeight.EMPTY)) / 100;
+
+    return score;
+};
+
+Simulation.prototype.calculateMoveScore = function (board, currentDepth) {
+    let bestScore = 0;
+
+    for(let direction in Object.values(this.Keys)) {
+        const newBoard = this.simulateMove(board, direction);
+        if(this.areBoardsEqual(board, newBoard)) continue;
+
+        const score = this.generateScore(newBoard, currentDepth + 1);
+        bestScore = Math.max(score, bestScore);
+    }
+
+    return bestScore;
+};
 
 Simulation.prototype.generateScore = function (board, currentDepth) {
-    if(currentDepth >= this.maxDepth) {
-        return calculateFinalScore(board);
+    if(Number(currentDepth) >= Number(this.maxDepth)) {
+        return this.calculateFinalScore(board);
     }
 
     let totalScore = 0;
-    return totalScore; // TODO: Calculate the total score
+    for(let y = 0; y < this.game.size; y++) {
+        const row = board[y];
+        for(let x = 0; x < this.game.size; x++) {
+            const cell = row[x];
+            if(cell !== null && cell.value !== null) continue;
+
+            const weight2 = this.spawnChance2 / 100;
+            const weight4 = (100 - this.spawnChance2) / 100;
+
+            // Simulate spawning a 2 in this cell
+            const newBoard2 = board;
+            newBoard2[y][x] = { position: { x, y }, value: 2 };
+            const moveScore2 = this.calculateMoveScore(newBoard2, currentDepth);
+            totalScore += (weight2 * moveScore2);
+
+            // Simulate spawning a 4 in this cell
+            const newBoard4 = board;
+            newBoard4[y][x] = { position: { x, y }, value: 4 };
+            const moveScore4 = this.calculateMoveScore(newBoard4, currentDepth);
+            totalScore += (weight4 * moveScore4);
+        }
+    }
+
+    return totalScore;
 };
 
 Simulation.prototype.areBoardsEqual = function (a, b) {
     if(a === b) return true;
     if(a === null || b === null) return false;
 
-    for(let i = 0; i < 4; j++) {
-        for(let j = 0; j < 4; j++) {
-            if(a[i][j] === null && b[i][j] !== null) {
-                return false;
-            }
+    for(let y = 0; y < this.game.size; y++) {
+        for(let x = 0; x < this.game.size; x++) {
+            let aValue, bValue;
 
-            if(a[i][j] !== null && b[i][j] === null) {
-                return false;
-            }
+            if(a[y][x] === null) aValue = null;
+            else aValue = Number(a[y][x].value);
 
-            if(a[i][j].value !== b[i][j].value) {
+            if(b[y][x] === null) bValue = null;
+            else bValue = Number(b[y][x].value);
+
+            if(aValue !== bValue) {
                 return false;
             }
         }
@@ -173,7 +198,7 @@ Simulation.prototype.simulateMove = function (board, direction) {
     const clone = GameManager.createBackgroundClone(board);
     clone.move(direction);
 
-    return clone.grid.cells;
+    return clone.serialize().grid.cells;
 };
 
 Simulation.prototype.calculateScore = function (board, direction) {
@@ -193,7 +218,7 @@ Simulation.prototype.getCurrentBoard = function ()  {
 Simulation.prototype.getNextMove = function () {
     const currentBoard = this.getCurrentBoard();
 
-    let bestMove = null;
+    let bestMove = this.Keys.RIGHT;
     let bestScore = 0;
 
     for(let direction in Object.values(this.Keys)) {
@@ -210,7 +235,7 @@ Simulation.prototype.getNextMove = function () {
 Simulation.prototype.updateOptimalMoveText = function () {
     const text = document.querySelector('#next-move');
 
-    switch(this.optimalMove) {
+    switch(Number(this.optimalMove)) {
         case this.Keys.UP:
             text.innerText = 'UP';
             break;
@@ -241,8 +266,11 @@ Simulation.prototype.playNextMove = function () {
 
     this.game.inputManager.emit('move', move);
 
-    this.optimalMove = this.getNextMove();
-    this.updateOptimalMoveText();
+    if(!this.autoPlay) {
+        this.optimalMove = this.getNextMove();
+        this.updateOptimalMoveText();
+        this.copyBoardToTextFields();
+    }
 
     if(this.game.over) {
         this.handleGameOver();
@@ -252,6 +280,23 @@ Simulation.prototype.playNextMove = function () {
     if(this.autoPlay) {
         setTimeout(this.playNextMove.bind(this), 100);
     }
+};
+
+Simulation.prototype.clearGridTextFields = function () {
+    const fields = Array.from(document.querySelectorAll('.grid-value'));
+    fields.forEach(field => field.value = null);
+};
+
+Simulation.prototype.copyBoardToTextFields = function () {
+  const currentBoard = this.getCurrentBoard();
+
+  for(let x = 0; x < this.game.size; x++) {
+      for(let y = 0; y < this.game.size; y++) {
+          const element = document.querySelector(`.grid-value[data-x="${x}"][data-y="${y}"]`);
+          const cell = currentBoard[x][y];
+          element.value = cell ? cell.value : null;
+      }
+  }
 };
 
 window.requestAnimationFrame(function () {
