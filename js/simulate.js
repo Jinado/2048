@@ -1,8 +1,10 @@
-function Simulation() {
+function Simulation(imageProcessor) {
     this.game = window.game;
     this.spawnChance2 = Number(document.querySelector('#spawn-chance-2').value);
     this.autoPlay = false;
     this.optimalMove = null;
+
+    this.imageProcessor = imageProcessor;
 
     this.Keys = {
         UP: 0,
@@ -403,5 +405,10 @@ Simulation.prototype.copyBoardToTextFields = function () {
 };
 
 window.requestAnimationFrame(function () {
-    new Simulation();
+    new Simulation(new ImageProcessor('#camera', {
+        width: 320,
+        height: 240,
+        image_format: 'jpeg',
+        jpeg_quality: 100
+    }));
 });
