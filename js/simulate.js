@@ -12,10 +12,10 @@ function Simulation() {
     };
 
     this.ScoreWeight = {
-        FIXED: 10000,
-        EMPTY: 60,
-        MERGES: 100,
-        POSITION: 70
+        EMPTY: 50,
+        MERGES: 10,
+        POSITION: 20,
+        MAX_TILE: 10000
     };
 
     this.maxDepth = Number(document.querySelector('#max-depth').value);
@@ -53,6 +53,9 @@ Simulation.prototype.init = function () {
 
     document.querySelector('#score-weight-position')
         .addEventListener('change', this.updateScoreWeightPosition.bind(this));
+
+    document.querySelector('#score-weight-max-tile')
+        .addEventListener('change', this.updateScoreWeightMaxTile.bind(this));
 };
 
 Simulation.prototype.updateScoreWeightEmpty = function () {
@@ -65,6 +68,15 @@ Simulation.prototype.updateScoreWeightMerges = function () {
 
 Simulation.prototype.updateScoreWeightPosition = function () {
     this.ScoreWeight.POSITION = Number(document.querySelector('#score-weight-position').value);
+};
+
+Simulation.prototype.updateScoreWeightMaxTile = function () {
+    this.ScoreWeight.MAX_TILE = Number(document.querySelector('#score-weight-max-tile').value);
+};
+
+Simulation.prototype.getTileValue = function (board, x, y) {
+  const tile = (board[x] || null)[y] || null;
+  return tile ? tile.value : 0;
 };
 
 Simulation.prototype.handleSetGridButton = function () {
@@ -88,6 +100,9 @@ Simulation.prototype.handleSetGridButton = function () {
         bestScore:  this.game.storageManager.getBestScore(),
         terminated: this.game.isGameTerminated()
     });
+
+    this.optimalMove = this.getNextMove();
+    this.updateOptimalMoveText();
 };
 
 Simulation.prototype.handleAutoplayButton = function (e) {
@@ -154,24 +169,22 @@ Simulation.prototype.getTotalPossibleMerges = function (board) {
             const cell = board[x][y];
 
             const cellAbove = board[x][y + 1] || null;
-            const cellBelow = board[x][y - 1] || null;
             const cellRight = (board[x + 1] || [])[y] || null;
-            const cellLeft  = (board[x - 1] || [])[y] || null;
 
-            const adjacentCells = [ cellAbove, cellBelow, cellRight, cellLeft ];
+            if(this.areCellsOfEqualValue(cell, cellAbove)) {
+                total++;
+            }
 
-            adjacentCells.forEach(adjacentCell => {
-                if(this.areCellsOfEqualValue(cell, adjacentCell)) {
-                    total++;
-                }
-            });
+            if(this.areCellsOfEqualValue(cell, cellRight)) {
+                total++;
+            }
         }
     }
 
     return total;
 };
 
-Simulation.prototype.getPositionScore = function (board) {
+Simulation.prototype.isHighestValueTileInTopRight = function (board) {
     let highestValueIsInCorner = false;
     let highestValue = 0;
 
@@ -182,16 +195,44 @@ Simulation.prototype.getPositionScore = function (board) {
 
             highestValue = Math.max(cell.value, highestValue);
             if(cell.value === highestValue) {
-                highestValueIsInCorner = Number(x) === 0 && Number(y) === 0;
+                // Top right corner
+                highestValueIsInCorner = Number(x) === 3 && Number(y) === 0;
             }
         }
     }
 
-    return highestValueIsInCorner ? 1 : 0;
+    return highestValueIsInCorner;
+};
+
+Simulation.prototype.getPositionScore = function (board) {
+    let total = 0;
+
+    const x0y0 = this.getTileValue(board, 0, 0);
+    const x1y0 = this.getTileValue(board, 1, 0);
+    const x2y0 = this.getTileValue(board, 2, 0);
+    const x3y0 = this.getTileValue(board, 3, 0);
+
+    // Tiles are ordered in the top row going low to high, left to right
+    if((x0y0 < x1y0) && (x1y0 < x2y0) && (x2y0 < x3y0)) {
+        total++;
+    }
+
+    // Each next tile is exactly one tile larger than the previous tile
+    if((x0y0 === (x1y0 / 2)) && (x1y0 === (x2y0 / 2)) && (x2y0 === (x3y0 / 2))) {
+        total += 5;
+    }
+
+    return total;
 };
 
 Simulation.prototype.calculateFinalScore = function (board) {
-    let score = this.ScoreWeight.FIXED;
+    let score = 0;
+
+    const position = this.getPositionScore(board);
+    score = score + (position * this.ScoreWeight.POSITION);
+
+    const maxValueIsInCorner = this.isHighestValueTileInTopRight(board);
+    score = score + (maxValueIsInCorner ? this.ScoreWeight.MAX_TILE : 0);
 
     const emptySpaces = this.getTotalEmptySpaces(board);
     score = score + (emptySpaces * this.ScoreWeight.EMPTY);
@@ -199,10 +240,7 @@ Simulation.prototype.calculateFinalScore = function (board) {
     const merges = this.getTotalPossibleMerges(board);
     score = score + (merges * this.ScoreWeight.MERGES);
 
-    const position = this.getPositionScore(board);
-    score = score + (position * this.ScoreWeight.POSITION);
-
-    return score / 100;
+    return score;
 };
 
 Simulation.prototype.calculateMoveScore = function (board, currentDepth) {
@@ -220,50 +258,28 @@ Simulation.prototype.calculateMoveScore = function (board, currentDepth) {
 };
 
 Simulation.prototype.generateScore = function (board, currentDepth) {
-    if(Number(currentDepth) >= Number(this.maxDepth)) {
+    const maxDepth = Number(this.maxDepth);
+
+    if(maxDepth === 1 || (Number(currentDepth) >= maxDepth)) {
         return this.calculateFinalScore(board);
     }
 
-    let totalScore = 0;
-    for(let y = 0; y < this.game.size; y++) {
-        const row = board[y];
-        for(let x = 0; x < this.game.size; x++) {
-            const cell = row[x];
-            if(cell !== null && cell.value !== null) continue;
-
-            const weight2 = this.spawnChance2 / 100;
-            const weight4 = (100 - this.spawnChance2) / 100;
-
-            // Simulate spawning a 2 in this cell
-            const newBoard2 = board;
-            newBoard2[y][x] = { position: { x, y }, value: 2 };
-            const moveScore2 = this.calculateMoveScore(newBoard2, currentDepth);
-            totalScore += (weight2 * moveScore2);
-
-            // Simulate spawning a 4 in this cell
-            const newBoard4 = board;
-            newBoard4[y][x] = { position: { x, y }, value: 4 };
-            const moveScore4 = this.calculateMoveScore(newBoard4, currentDepth);
-            totalScore += (weight4 * moveScore4);
-        }
-    }
-
-    return totalScore;
+    return this.calculateMoveScore(board, currentDepth);
 };
 
 Simulation.prototype.areBoardsEqual = function (a, b) {
     if(a === b) return true;
     if(a === null || b === null) return false;
 
-    for(let y = 0; y < this.game.size; y++) {
-        for(let x = 0; x < this.game.size; x++) {
+    for(let x = 0; x < this.game.size; x++) {
+        for(let y = 0; y < this.game.size; y++) {
             let aValue, bValue;
 
-            if(a[y][x] === null) aValue = null;
-            else aValue = Number(a[y][x].value);
+            if(a[x][y] === null) aValue = null;
+            else aValue = Number(a[x][y].value);
 
-            if(b[y][x] === null) bValue = null;
-            else bValue = Number(b[y][x].value);
+            if(b[x][y] === null) bValue = null;
+            else bValue = Number(b[x][y].value);
 
             if(aValue !== bValue) {
                 return false;
